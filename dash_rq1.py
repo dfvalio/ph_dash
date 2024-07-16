@@ -10,7 +10,11 @@ from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import plotly.express as px
 
-print("Done importing")
+def to_df(queryurl):
+  response = requests.get(queryurl)
+  content_text = StringIO(response.content.decode('utf-8'))
+  df = pd.read_csv(content_text)
+  return df
 
 today = date.today()
 today_str = today.strftime("%Y%m%d")
@@ -18,23 +22,10 @@ start_day = today - datetime.timedelta(365)
 start_day_str = start_day.strftime("%Y%m%d")
 
 query_url_ukr = f"https://api.gdeltproject.org/api/v2/tv/tv?query=(ukraine%20OR%20ukrainian%20OR%20zelenskyy%20OR%20zelensky%20OR%20kiev%20OR%20kyiv)%20market:%22National%22&mode=timelinevol&format=html&datanorm=perc&format=csv&timelinesmooth=5&datacomb=sep&timezoom=yes&STARTDATETIME={start_day_str}120000&ENDDATETIME={today_str}120000"
-
 query_url_rus = f"https://api.gdeltproject.org/api/v2/tv/tv?query=(kremlin%20OR%20russia%20OR%20putin%20OR%20moscow%20OR%20russian)%20market:%22National%22&mode=timelinevol&format=html&datanorm=perc&format=csv&timelinesmooth=5&datacomb=sep&timezoom=yes&STARTDATETIME={start_day_str}120000&ENDDATETIME={today_str}120000"
-
-print("Done querying")
-
-def to_df(queryurl):
-  response = requests.get(queryurl)
-  content_text = StringIO(response.content.decode('utf-8'))
-  df = pd.read_csv(content_text)
-  return df
 
 df_ukr = to_df(query_url_ukr)
 df_rus = to_df(query_url_rus)
-
-
-# Take a look at the retrieved dataframe
-print(df_rus.head())
 
 # Rename the first column to something shorter for convenience
 df_ukr = df_ukr.rename(columns={df_ukr.columns[0]: "date_col"})
@@ -51,9 +42,8 @@ df_rus['date_col'] = pd.to_datetime(df_rus['date_col'])
 df_rus = df_rus[[x in ['CNN', 'FOXNEWS', 'MSNBC'] for x in df_rus.Series]]
 df_ukr = df_ukr[[x in ['CNN', 'FOXNEWS', 'MSNBC'] for x in df_ukr.Series]]
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LITERA]) # for now use JupyterDash in a colab environment
 server = app.server
-
 
 app.layout = dbc.Container(
     [   dbc.Row([ # row 1
@@ -124,4 +114,5 @@ def update_output(start_date, end_date):
     
     return line_fig_ukr, line_fig_rus
 
-app.run_server(debug=True)
+if __name__ == '__main__':
+    app.run_server(debug=True)
